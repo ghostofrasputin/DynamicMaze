@@ -14,7 +14,7 @@
  ******************************************************************************/ 
   
 // wrapper for our game "classes", "methods" and "objects"
-	window.Game = {};
+  window.Game = {};
 
 //------------------------------------------------------------------------------
 // Our global functions and variables
@@ -270,7 +270,7 @@ function PriorityQueue() {
 // A* Player to Goal path solved. This path is needed for the constraint that
 // the player must always have a path to the goal, every regeneration.
 //------------------------------------------------------------------------------
-	
+  
   function rexists(listOfRects, succ){
     var x = succ.left;
     var y = succ.top;
@@ -348,163 +348,163 @@ function PriorityQueue() {
 //------------------------------------------------------------------------------    
 // wrapper for "class" Rectangle
 //------------------------------------------------------------------------------ 
-	(function(){
-		function Rectangle(left, top, width, height, color){
-			this.left = left || 0;
-			this.top = top || 0;
+  (function(){
+    function Rectangle(left, top, width, height, color){
+      this.left = left || 0;
+      this.top = top || 0;
       this.width = width || 0;
-			this.height = height || 0;
-			this.right = this.left + this.width;
-			this.bottom = this.top + this.height;
+      this.height = height || 0;
+      this.right = this.left + this.width;
+      this.bottom = this.top + this.height;
       this.color = color;
-		}
-		
-		Rectangle.prototype.set = function(left, top, /*optional*/width, /*optional*/height){
-			this.left = left;
+    }
+    
+    Rectangle.prototype.set = function(left, top, /*optional*/width, /*optional*/height){
+      this.left = left;
       this.top = top;
       this.width = width || this.width;
       this.height = height || this.height
       this.right = (this.left + this.width);
       this.bottom = (this.top + this.height);
-		}
-		
-		Rectangle.prototype.within = function(r) {
-			return (r.left <= this.left && 
-					r.right >= this.right &&
-					r.top <= this.top && 
-					r.bottom >= this.bottom);
-		}		
-		
-		Rectangle.prototype.overlaps = function(r) {
-			return (this.left < r.right && 
-					r.left < this.right && 
-					this.top < r.bottom &&
-					r.top < this.bottom);
-		}
+    }
     
-		// add "class" Rectangle to our Game object
-		Game.Rectangle = Rectangle;
-	})();	
+    Rectangle.prototype.within = function(r) {
+      return (r.left <= this.left && 
+          r.right >= this.right &&
+          r.top <= this.top && 
+          r.bottom >= this.bottom);
+    }   
+    
+    Rectangle.prototype.overlaps = function(r) {
+      return (this.left < r.right && 
+          r.left < this.right && 
+          this.top < r.bottom &&
+          r.top < this.bottom);
+    }
+    
+    // add "class" Rectangle to our Game object
+    Game.Rectangle = Rectangle;
+  })(); 
 
 //------------------------------------------------------------------------------  
 // wrapper for "class" Camera (avoid global objects)
 //------------------------------------------------------------------------------ 
-	(function(){
-	
-		// possibles axis to move the camera
-		var AXIS = {
-			NONE: "none", 
-			HORIZONTAL: "horizontal", 
-			VERTICAL: "vertical", 
-			BOTH: "both"
-		};
+  (function(){
+  
+    // possibles axis to move the camera
+    var AXIS = {
+      NONE: "none", 
+      HORIZONTAL: "horizontal", 
+      VERTICAL: "vertical", 
+      BOTH: "both"
+    };
 
-		// Camera constructor
-		function Camera(xView, yView, canvasWidth, canvasHeight, worldWidth, worldHeight)
-		{
-			// position of camera (left-top coordinate)
-			this.xView = xView || 0;
-			this.yView = yView || 0;
-			
-			// distance from followed object to border before camera starts move
-			this.xDeadZone = 0; // min distance to horizontal borders
-			this.yDeadZone = 0; // min distance to vertical borders
-			
-			// viewport dimensions
-			this.wView = canvasWidth;
-			this.hView = canvasHeight;			
-			
-			// allow camera to move in vertical and horizontal axis
-			this.axis = AXIS.BOTH;	
-		
-			// object that should be followed
-			this.followed = null;
-			
-			// rectangle that represents the viewport
-			this.viewportRect = new Game.Rectangle(this.xView, this.yView, this.wView, this.hView);				
-								
-			// rectangle that represents the world's boundary (room's boundary)
-			this.worldRect = new Game.Rectangle(0, 0, worldWidth, worldHeight);
-			
-		}
+    // Camera constructor
+    function Camera(xView, yView, canvasWidth, canvasHeight, worldWidth, worldHeight)
+    {
+      // position of camera (left-top coordinate)
+      this.xView = xView || 0;
+      this.yView = yView || 0;
+      
+      // distance from followed object to border before camera starts move
+      this.xDeadZone = 0; // min distance to horizontal borders
+      this.yDeadZone = 0; // min distance to vertical borders
+      
+      // viewport dimensions
+      this.wView = canvasWidth;
+      this.hView = canvasHeight;      
+      
+      // allow camera to move in vertical and horizontal axis
+      this.axis = AXIS.BOTH;  
+    
+      // object that should be followed
+      this.followed = null;
+      
+      // rectangle that represents the viewport
+      this.viewportRect = new Game.Rectangle(this.xView, this.yView, this.wView, this.hView);       
+                
+      // rectangle that represents the world's boundary (room's boundary)
+      this.worldRect = new Game.Rectangle(0, 0, worldWidth, worldHeight);
+      
+    }
 
-		// gameObject needs to have "x" and "y" properties (as world(or room) position)
-		Camera.prototype.follow = function(gameObject, xDeadZone, yDeadZone)
-		{		
-			this.followed = gameObject;	
-			this.xDeadZone = xDeadZone;
-			this.yDeadZone = yDeadZone;
-		}					
-		
-		Camera.prototype.update = function()
-		{
-			// keep following the player (or other desired object)
-			if(this.followed != null)
-			{		
-				if(this.axis == AXIS.HORIZONTAL || this.axis == AXIS.BOTH)
-				{		
-					// moves camera on horizontal axis based on followed object position
-					if(this.followed.x - this.xView  + this.xDeadZone > this.wView)
-						this.xView = this.followed.x - (this.wView - this.xDeadZone);
-					else if(this.followed.x  - this.xDeadZone < this.xView)
-						this.xView = this.followed.x  - this.xDeadZone;
-					
-				}
-				if(this.axis == AXIS.VERTICAL || this.axis == AXIS.BOTH)
-				{
-					// moves camera on vertical axis based on followed object position
-					if(this.followed.y - this.yView + this.yDeadZone > this.hView)
-						this.yView = this.followed.y - (this.hView - this.yDeadZone);
-					else if(this.followed.y - this.yDeadZone < this.yView)
-						this.yView = this.followed.y - this.yDeadZone;
-				}						
-				
-			}		
-			
-			// update viewportRect
-			this.viewportRect.set(this.xView, this.yView);
-			
-			// don't let camera leaves the world's boundary
-			if(!this.viewportRect.within(this.worldRect))
-			{
-				if(this.viewportRect.left < this.worldRect.left)
-					this.xView = this.worldRect.left;
-				if(this.viewportRect.top < this.worldRect.top)					
-					this.yView = this.worldRect.top;
-				if(this.viewportRect.right > this.worldRect.right)
-					this.xView = this.worldRect.right - this.wView;
-				if(this.viewportRect.bottom > this.worldRect.bottom)					
-					this.yView = this.worldRect.bottom - this.hView;
-			}
-			
-		}	
-		
-		// add "class" Camera to our Game object
-		Game.Camera = Camera;
-		
-	})();
+    // gameObject needs to have "x" and "y" properties (as world(or room) position)
+    Camera.prototype.follow = function(gameObject, xDeadZone, yDeadZone)
+    {   
+      this.followed = gameObject; 
+      this.xDeadZone = xDeadZone;
+      this.yDeadZone = yDeadZone;
+    }         
+    
+    Camera.prototype.update = function()
+    {
+      // keep following the player (or other desired object)
+      if(this.followed != null)
+      {   
+        if(this.axis == AXIS.HORIZONTAL || this.axis == AXIS.BOTH)
+        {   
+          // moves camera on horizontal axis based on followed object position
+          if(this.followed.x - this.xView  + this.xDeadZone > this.wView)
+            this.xView = this.followed.x - (this.wView - this.xDeadZone);
+          else if(this.followed.x  - this.xDeadZone < this.xView)
+            this.xView = this.followed.x  - this.xDeadZone;
+          
+        }
+        if(this.axis == AXIS.VERTICAL || this.axis == AXIS.BOTH)
+        {
+          // moves camera on vertical axis based on followed object position
+          if(this.followed.y - this.yView + this.yDeadZone > this.hView)
+            this.yView = this.followed.y - (this.hView - this.yDeadZone);
+          else if(this.followed.y - this.yDeadZone < this.yView)
+            this.yView = this.followed.y - this.yDeadZone;
+        }           
+        
+      }   
+      
+      // update viewportRect
+      this.viewportRect.set(this.xView, this.yView);
+      
+      // don't let camera leaves the world's boundary
+      if(!this.viewportRect.within(this.worldRect))
+      {
+        if(this.viewportRect.left < this.worldRect.left)
+          this.xView = this.worldRect.left;
+        if(this.viewportRect.top < this.worldRect.top)          
+          this.yView = this.worldRect.top;
+        if(this.viewportRect.right > this.worldRect.right)
+          this.xView = this.worldRect.right - this.wView;
+        if(this.viewportRect.bottom > this.worldRect.bottom)          
+          this.yView = this.worldRect.bottom - this.hView;
+      }
+      
+    } 
+    
+    // add "class" Camera to our Game object
+    Game.Camera = Camera;
+    
+  })();
 
 //------------------------------------------------------------------------------   
 // wrapper for "class" Player
 //------------------------------------------------------------------------------ 
-	(function(){
-		function Player(x, y){
-			// (x, y) = center of object
-			// ATTENTION:
-			// it represents the player position on the world(room), not the canvas position
-			this.x = x;
-			this.y = y;				
-			
-			// move speed in pixels per second
-			this.speed = 100;		
-			
-			// render properties
-			this.width = 25;
-			this.height = 25;
+  (function(){
+    function Player(x, y){
+      // (x, y) = center of object
+      // ATTENTION:
+      // it represents the player position on the world(room), not the canvas position
+      this.x = x;
+      this.y = y;       
       
-		}
-		
-		Player.prototype.update = function(step, worldWidth, worldHeight,eArray){
+      // move speed in pixels per second
+      this.speed = 100;   
+      
+      // render properties
+      this.width = 25;
+      this.height = 25;
+      
+    }
+    
+    Player.prototype.update = function(step, worldWidth, worldHeight,eArray){
         // loop over list of reactangles
         var collide = false;
         var skip = false;
@@ -579,19 +579,19 @@ function PriorityQueue() {
         } 
     }  
         
-		Player.prototype.draw = function(context, xView, yView){		
-			// draw a simple rectangle shape as our player model
-			context.save();
-			context.fillStyle = "black";
-			// before draw we need to convert player world's position to canvas position			
-			context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
-			context.restore();			
-		}
-		
-		// add "class" Player to our Game object
-		Game.Player = Player;
-		
-	})();
+    Player.prototype.draw = function(context, xView, yView){    
+      // draw a simple rectangle shape as our player model
+      context.save();
+      context.fillStyle = "black";
+      // before draw we need to convert player world's position to canvas position      
+      context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
+      context.restore();      
+    }
+    
+    // add "class" Player to our Game object
+    Game.Player = Player;
+    
+  })();
   
 //------------------------------------------------------------------------------
 // wrapper for enemy class
@@ -599,10 +599,10 @@ function PriorityQueue() {
   (function(){
     function Enemy(x,y,card){
       this.x = x;
-			this.y = y;				
-			this.speed = 200;		
-			this.width = 25;
-			this.height = 31;
+      this.y = y;       
+      this.speed = 200;   
+      this.width = 25;
+      this.height = 31;
       this.counter = 40;
       this.threshold = 40;
       this.card = card;
@@ -701,58 +701,58 @@ function PriorityQueue() {
     }
     
     // based on  player draw
-    Enemy.prototype.draw = function(context, xView, yView){		
-			context.save();
+    Enemy.prototype.draw = function(context, xView, yView){   
+      context.save();
       
-			//context.fillStyle = "red";		
-			//context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
+      //context.fillStyle = "red";    
+      //context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
       context.drawImage(this.card, this.x-this.width/2 - xView, this.y-this.height/2 - yView);
-			context.restore();			
-		}
+      context.restore();      
+    }
     
     // add "class" Player to our Game object
-		Game.Enemy = Enemy;
+    Game.Enemy = Enemy;
     
   })();  
 
 //------------------------------------------------------------------------------   
 // wrapper for "class" Map
 //------------------------------------------------------------------------------
-	(function(){
-		function Map(width, height){
-			// map dimensions
-			this.width = width;
-			this.height = height;
-			
-			// map texture
-			this.image = null;
-		}
-		
-		// generate an example of a large map
-		Map.prototype.generate = function(player, eArray, path){
-			var ctx = document.createElement("canvas").getContext("2d");		
-			ctx.canvas.width = this.width;
-			ctx.canvas.height = this.height;		
-			var playerList = [player.x-player.width/2,
+  (function(){
+    function Map(width, height){
+      // map dimensions
+      this.width = width;
+      this.height = height;
+      
+      // map texture
+      this.image = null;
+    }
+    
+    // generate an example of a large map
+    Map.prototype.generate = function(player, eArray, path){
+      var ctx = document.createElement("canvas").getContext("2d");    
+      ctx.canvas.width = this.width;
+      ctx.canvas.height = this.height;    
+      var playerList = [player.x-player.width/2,
                         player.y-player.height/2,
                         player.width,
                         player.height];
                         
       // ~~ takes the floor of a number (double bitwise not)
       var rows = ~~(this.width/40) + 1; 
-			var columns = ~~(this.height/40) + 1;
+      var columns = ~~(this.height/40) + 1;
       
       // set goal
       var goal_rect = new Game.Rectangle(40, 40, 80, 80, "blue");
       rects.unshift(goal_rect);
       
       var colors = ["white","white","darkgreen"];   
-			ctx.save();			
-			ctx.fillStyle = "black";
-			for (var x = 0, i = 0; i < rows; x+=40, i++) {	
-				for (var y = 0, j=0; j < columns; y+=40, j++) {
+      ctx.save();     
+      ctx.fillStyle = "black";
+      for (var x = 0, i = 0; i < rows; x+=40, i++) {  
+        for (var y = 0, j=0; j < columns; y+=40, j++) {
           var color = colors[~~(Math.random() * colors.length)];
-					ctx.beginPath();
+          ctx.beginPath();
           // X AND Y ARE FLIPPED; X = VERTICAL, Y = HORIZONTAL !!!
           var rect = new Game.Rectangle(y, x, 40, 40, color); 
           // makes sure wall does not spawn on player's start location
@@ -793,16 +793,16 @@ function PriorityQueue() {
       // draw goal
       ctx.fillStyle = "blue";
       ctx.fillRect(40, 40, 80, 80);      
-      ctx.restore();	
-			
-			// store the generate map as this image texture
-			this.image = new Image();
-			this.image.src = ctx.canvas.toDataURL("image/png");					
-			
-			// clear context
-			ctx = null;
-		}
-		
+      ctx.restore();  
+      
+      // store the generate map as this image texture
+      this.image = new Image();
+      this.image.src = ctx.canvas.toDataURL("image/png");         
+      
+      // clear context
+      ctx = null;
+    }
+    
     // regenerate maze
     Map.prototype.regen = function(player,enemy,path) {
       // all black and white rectangles:
@@ -814,70 +814,70 @@ function PriorityQueue() {
       rects = [];
       whiteRects = [];
       combinedRects = [];
-			this.generate(player,enemy,path) // rebuild the map;
-		}
+      this.generate(player,enemy,path) // rebuild the map;
+    }
     
-		// draw the map adjusted to camera
-		Map.prototype.draw = function(context, xView, yView){					
-			// easiest way: draw the entire map changing only the destination coordinate in canvas
-			// canvas will cull the image by itself (no performance gaps -> in hardware accelerated environments, at least)
-			//context.drawImage(this.image, 0, 0, this.image.width, this.image.height, -xView, -yView, this.image.width, this.image.height);
-			
-			// didactic way:
-			var sx, sy, dx, dy;
+    // draw the map adjusted to camera
+    Map.prototype.draw = function(context, xView, yView){         
+      // easiest way: draw the entire map changing only the destination coordinate in canvas
+      // canvas will cull the image by itself (no performance gaps -> in hardware accelerated environments, at least)
+      //context.drawImage(this.image, 0, 0, this.image.width, this.image.height, -xView, -yView, this.image.width, this.image.height);
+      
+      // didactic way:
+      var sx, sy, dx, dy;
          var sWidth, sHeight, dWidth, dHeight;
-			
-			// offset point to crop the image
-			sx = xView;
-			sy = yView;
-			
-			// dimensions of cropped image			
-			sWidth =  context.canvas.width;
-			sHeight = context.canvas.height;
+      
+      // offset point to crop the image
+      sx = xView;
+      sy = yView;
+      
+      // dimensions of cropped image      
+      sWidth =  context.canvas.width;
+      sHeight = context.canvas.height;
 
-			// if cropped image is smaller than canvas we need to change the source dimensions
-			if(this.image.width - sx < sWidth){
-				sWidth = this.image.width - sx;
-			}
-			if(this.image.height - sy < sHeight){
-				sHeight = this.image.height - sy; 
-			}
-			
-			// location on canvas to draw the croped image
-			dx = 0;
-			dy = 0;
-			// match destination with source to not scale the image
-			dWidth = sWidth;
-			dHeight = sHeight;									
-			
-			context.drawImage(this.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);			
-		}
-		
-		// add "class" Map to our Game object
-		Game.Map = Map;
-		
-	})();
+      // if cropped image is smaller than canvas we need to change the source dimensions
+      if(this.image.width - sx < sWidth){
+        sWidth = this.image.width - sx;
+      }
+      if(this.image.height - sy < sHeight){
+        sHeight = this.image.height - sy; 
+      }
+      
+      // location on canvas to draw the croped image
+      dx = 0;
+      dy = 0;
+      // match destination with source to not scale the image
+      dWidth = sWidth;
+      dHeight = sHeight;                  
+      
+      context.drawImage(this.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);      
+    }
+    
+    // add "class" Map to our Game object
+    Game.Map = Map;
+    
+  })();
 
 //------------------------------------------------------------------------------   
 // Game Script wrapper
 //------------------------------------------------------------------------------ 
-	(function(){
-		// prepaire our game canvas
-		var canvas = document.getElementById("gameCanvas");
-		var context = canvas.getContext("2d");
+  (function(){
+    // prepaire our game canvas
+    var canvas = document.getElementById("gameCanvas");
+    var context = canvas.getContext("2d");
 
-		// game settings:	
-		var FPS = 30;
-		var INTERVAL = 1000/FPS; // milliseconds
-		var STEP = INTERVAL/1000 // seconds
-		
-		// setup an object that represents the room
-		var room = {
-			width: 3000,
-			height: 3000,
-			map: new Game.Map(3000, 3000)
-		};
-		
+    // game settings: 
+    var FPS = 30;
+    var INTERVAL = 1000/FPS; // milliseconds
+    var STEP = INTERVAL/1000 // seconds
+    
+    // setup an object that represents the room
+    var room = {
+      width: 3000,
+      height: 3000,
+      map: new Game.Map(3000, 3000)
+    };
+    
     // setup player in the middle of the maze
     var player = new Game.Player(room.width/2, room.height/2);
    
@@ -892,17 +892,17 @@ function PriorityQueue() {
     // delcare path
     var path = []
     // generate a large image texture for the room
-		room.map.generate(player, enemyArray, path);
+    room.map.generate(player, enemyArray, path);
     
     // regenerate with greedy path
-		room.map.regen(player, enemyArray, path);
+    room.map.regen(player, enemyArray, path);
     
-		// setup the magic camera !!!
-		var camera = new Game.Camera(0, 0, canvas.width, canvas.height, room.width, room.height);		
-		camera.follow(player, canvas.width/2, canvas.height/2);
+    // setup the magic camera !!!
+    var camera = new Game.Camera(0, 0, canvas.width, canvas.height, room.width, room.height);   
+    camera.follow(player, canvas.width/2, canvas.height/2);
     
-		// Game update function
-		var update = function(){
+    // Game update function
+    var update = function(){
       if (seconds == 0){ 
         seconds = 30;
         lose = false;
@@ -913,17 +913,17 @@ function PriorityQueue() {
         var en = enemyArray[i];
         en.update(player, room.width, room.height);
       }      
-			camera.update();
-		}
-			
-		// Game draw function
-		var draw = function(){
-			// clear the entire canvas
-			context.clearRect(0, 0, canvas.width, canvas.height);
-			
-			// redraw all objects
-			room.map.draw(context, camera.xView, camera.yView);		
-			player.draw(context, camera.xView, camera.yView);
+      camera.update();
+    }
+      
+    // Game draw function
+    var draw = function(){
+      // clear the entire canvas
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // redraw all objects
+      room.map.draw(context, camera.xView, camera.yView);   
+      player.draw(context, camera.xView, camera.yView);
       
       for (var i = 0; i < enemyArray.length; i++){
         var en = enemyArray[i];
@@ -931,9 +931,9 @@ function PriorityQueue() {
       }
       
       // Draw the remaining seconds left
-			context.font = "50px Times New Roman";
+      context.font = "50px Times New Roman";
       context.fillStyle = "red";
-			context.fillText(seconds, 450, 45);
+      context.fillText(seconds, 450, 45);
       if (win == true){
         //context.clearRect(0, 0, canvas.width, canvas.height);
         context.font = "100px Times New Roman";
@@ -947,107 +947,107 @@ function PriorityQueue() {
         //context.fillText("Off With Her Head!", 10, canvas.height/2);
         context.fillText("You Lose", 130, canvas.height/2+60);
       }
-		}
-		
-		// Game Loop
-		var gameLoop = function(){        				
-			if(!lose && !win){
+    }
+    
+    // Game Loop
+    var gameLoop = function(){                
+      if(!lose && !win){
         update();
         draw();
       }  
-		}	
-		
-		// configure play/pause capabilities:
-		var runningId = -1;
-		Game.play = function(){	
-			if(runningId == -1){
-				runningId = setInterval(function(){
-					gameLoop();
-				}, INTERVAL);
-				console.log("play");
-			}
-		}
-		
-		Game.togglePause = function(){		
-			if(runningId == -1){
-				Game.play();
-			}
-			else
-			{
-				clearInterval(runningId);
-				runningId = -1;
-				console.log("paused");
-			}
-		}
+    } 
+    
+    // configure play/pause capabilities:
+    var runningId = -1;
+    Game.play = function(){ 
+      if(runningId == -1){
+        runningId = setInterval(function(){
+          gameLoop();
+        }, INTERVAL);
+        console.log("play");
+      }
+    }
+    
+    Game.togglePause = function(){    
+      if(runningId == -1){
+        Game.play();
+      }
+      else
+      {
+        clearInterval(runningId);
+        runningId = -1;
+        console.log("paused");
+      }
+    }
     
     // pass player to regeneration
     Game.sendPlayer = function(p, e, pa) {
-			// if we have no player to send then send the 
+      // if we have no player to send then send the 
       // player from the game script otherwise send p.
       (p == null) ? p = player : p; 
       (e == null) ? e = enemyArray : e;
       (pa == null) ? pa = path : pa;
-			//get the player into map regen function
+      //get the player into map regen function
       // rebuild the map;
       room.map.regen(p,e,path); 
-		}	
-	})();
+    } 
+  })();
 
-//------------------------------------------------------------------------------ 	
+//------------------------------------------------------------------------------  
 // configure Game controls:
 //------------------------------------------------------------------------------ 
 
-	Game.controls = {
-		left: false,
-		up: false,
-		right: false,
-		down: false,
-	};
+  Game.controls = {
+    left: false,
+    up: false,
+    right: false,
+    down: false,
+  };
 
-	window.addEventListener("keydown", function(e){
-		switch(e.keyCode)
-		{
-			case 65: // left arrow
-				Game.controls.left = true;
-				break;
-			case 87: // up arrow
-				Game.controls.up = true;
-				break;
-			case 68: // right arrow
-				Game.controls.right = true;
-				break;
-			case 83: // down arrow
-				Game.controls.down = true;
-				break;
-		}
-	}, false);
+  window.addEventListener("keydown", function(e){
+    switch(e.keyCode)
+    {
+      case 65: // left arrow
+        Game.controls.left = true;
+        break;
+      case 87: // up arrow
+        Game.controls.up = true;
+        break;
+      case 68: // right arrow
+        Game.controls.right = true;
+        break;
+      case 83: // down arrow
+        Game.controls.down = true;
+        break;
+    }
+  }, false);
 
-	window.addEventListener("keyup", function(e){
-		switch(e.keyCode)
-		{
-			case 65: // left arrow
-				Game.controls.left = false;
-				break;
-			case 87: // up arrow
-				Game.controls.up = false;
-				break;
-			case 68: // right arrow
-				Game.controls.right = false;
-				break;
-			case 83: // down arrow
-				Game.controls.down = false;
-				break;
-			case 80: // key P pauses the game
-				Game.togglePause();
-				break;		
-		}
-	}, false);
+  window.addEventListener("keyup", function(e){
+    switch(e.keyCode)
+    {
+      case 65: // left arrow
+        Game.controls.left = false;
+        break;
+      case 87: // up arrow
+        Game.controls.up = false;
+        break;
+      case 68: // right arrow
+        Game.controls.right = false;
+        break;
+      case 83: // down arrow
+        Game.controls.down = false;
+        break;
+      case 80: // key P pauses the game
+        Game.togglePause();
+        break;    
+    }
+  }, false);
 
 //------------------------------------------------------------------------------   
 // start the game when page is loaded
 //------------------------------------------------------------------------------ 
-	window.onload = function(){	
-		Game.play();
+  window.onload = function(){ 
+    Game.play();
       setInterval(Game.sendPlayer, 30000);
       setInterval(function() {seconds--;}, 1000);
-	}
+  }
