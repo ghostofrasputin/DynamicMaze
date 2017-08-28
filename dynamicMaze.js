@@ -138,7 +138,7 @@ function enemyCollision(enemyList,playerList) {
         r.top < this.bottom);
   }
   
-  // add "class" Rectangle to our Game object
+  // add "class" Rectangle to Game object
   Game.Rectangle = Rectangle;
 })(); 
 
@@ -248,6 +248,8 @@ function enemyCollision(enemyList,playerList) {
     // ATTENTION:
     // it represents the player position on the world(room), 
     // not the canvas position
+    // X AND Y coordinates are in the middle of square, 
+    // not top left !!!!
     this.x = x;
     this.y = y;       
     
@@ -257,7 +259,6 @@ function enemyCollision(enemyList,playerList) {
     // render properties
     this.width = 25;
     this.height = 25;
-    
   }
   
   Player.prototype.update = function(step, worldWidth, worldHeight,eArray){
@@ -266,44 +267,33 @@ function enemyCollision(enemyList,playerList) {
     var flags = [false,false,false,false];
     for(var i = 0; i < rects.length; i++){
       var current = rects[i];
-      // X AND Y coordinates are in the middle of square, 
-      // not top left !!!!
       var playerList = [this.x-this.width/2,this.y-this.height/2,this.width,this.height];
+      
+      // win condition: get to the blue tile
       if (collisionCheck(current, playerList)){  
-        // DEBUG LOGS
-        //console.log("collision");
-        //console.log(playerList);
-        //console.log(rects[i]);
-        //console.log(current.color);
-        
-        // win condition
         if (current.color == "blue" && lose != true){
           //console.log("You Win!!!");
           win = true;
         }
-        
-        // Collision checks
-        
-        // right side
-        if(this.x - this.width/2 +step < current.left){
-          flags[0] = true;
-          //console.log("right");
-        }
-        // bottom side
-        if(this.y - this.height/2 < current.top){
-          flags[1] = true;
-          //console.log("bottom");
-        }
-        // left side
-        if(this.x + this.width/2 > current.left+current.width){
-          flags[2] = true;
-          //console.log("left");
-        }
-        // up side
-        if(this.y + this.height/2 > current.top+current.height){
-          flags[3] = true;
-          //console.log("up");
-        }
+      }
+      
+      // sensor-wall collisions
+      var size = 1.0;
+      var right = [this.x+this.width/2,this.y-this.height/2,size,this.height];
+      var bottom = [this.x-this.width/2,this.y+this.height/2,this.width,size];
+      var left = [this.x-this.width/2-size,this.y-this.height/2,size,this.height];
+      var top = [this.x-this.width/2,this.y-this.height/2-size,this.width,size];
+      if(collisionCheck(current,right)){
+        flags[0] = true;
+      }
+      if(collisionCheck(current,bottom)){
+        flags[1] = true;
+      }
+      if(collisionCheck(current,left)){
+        flags[2] = true;
+      }
+      if(collisionCheck(current,top)){
+        flags[3] = true;
       }
     }
     
@@ -355,7 +345,7 @@ function enemyCollision(enemyList,playerList) {
     context.restore();      
   }
   
-  // add "class" Player to our Game object
+  // add "class" Player to Game object
   Game.Player = Player;
 })();
   
