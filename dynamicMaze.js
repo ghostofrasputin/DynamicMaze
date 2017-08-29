@@ -24,10 +24,11 @@ window.Game = {};
 // Global variables:
 var rects = [];
 var whiteRects = [];
-var combinedRects = [];
+var grid = [];
 var seconds = 30;
 var win = false;
 var lose = false;
+var goal_rect;
 
 // Image Resources:
 var cards = [];
@@ -101,6 +102,61 @@ function enemyCollision(enemyList,playerList) {
   return (minX < maxX2 && maxX > minX2 && minY < maxY2 && maxY > minY2);
 }
 
+//------------------------------------------------------------------------------
+// Priority Queue "class"
+//------------------------------------------------------------------------------ 
+function PriorityQueue() {
+
+  var items = [];
+
+  function QueueElement(element, priority) {
+    this.element = element;
+    this.priority = priority;
+  }
+
+  this.enqueue = function(element, priority) {
+    var queueElement = new QueueElement(element, priority);
+
+    if (this.isEmpty()) {
+      items.push(queueElement);
+    } else {
+      var added = false;
+      for (var i = 0; i < items.length; i++) {
+        if (queueElement.priority < items[i].priority) {
+          items.splice(i, 0, queueElement);
+          added = true;
+          break;
+        }
+      }
+      if (!added) {
+        items.push(queueElement);
+      }
+    }
+  };
+
+  this.dequeue = function () {
+    return items.shift();
+  };
+
+  this.front = function () {
+    return items[0];
+  };
+
+  this.isEmpty = function () {
+    return items.length == 0;
+  };
+
+  this.size = function () {
+      return items.length;
+  };
+
+  this.print = function () {
+    for (var i = 0; i < items.length; i++) {
+      console.log(items[i].element + ' - ' + items[i].priority);
+    }
+  };
+}
+
 //-------------------------------------------------------------------    
 // Rectangle wrapper
 //--------------------------------------------------------------------
@@ -140,7 +196,8 @@ function enemyCollision(enemyList,playerList) {
   
   // add "class" Rectangle to Game object
   Game.Rectangle = Rectangle;
-})(); 
+})();
+
 
 //-------------------------------------------------------------------- 
 // Camera wrapper
@@ -270,10 +327,10 @@ function enemyCollision(enemyList,playerList) {
       var playerList = [this.x-this.width/2,this.y-this.height/2,this.width,this.height];
       
       // win condition: get to the blue tile
-      if (collisionCheck(current, playerList)){  
-        if (current.color == "blue" && lose != true){
-          //console.log("You Win!!!");
+      if(collisionCheck(goal_rect, playerList)){
+        if (goal_rect.color == "blue"){
           win = true;
+          console.log("you win!!!");
         }
       }
       
@@ -465,6 +522,22 @@ function enemyCollision(enemyList,playerList) {
     context.restore();      
   }
   
+  Enemy.prototype.find_Astar_path_to_player = function(node){
+    /*var closed_set = []
+    var pq = new PriorityQueue();
+    pq.enqueue([node,[]);
+    while(!pq.isEmpty()){
+      var current = pq.dequeue();
+      var node = current.element[0];
+      var path = current.element[1];
+      var successors = node.get_neighbors();
+      closed_set.push(node)
+      for(var i=0; i<successors.length; i++){
+        var successor = successors[i];
+      }
+    }*/
+  }
+  
   // add "class" Enemy to Game object
   Game.Enemy = Enemy;
   
@@ -497,25 +570,24 @@ function enemyCollision(enemyList,playerList) {
     var rows = ~~(this.width/40) + 1; 
     var columns = ~~(this.height/40) + 1;
     
-    // set goal
-    var goal_rect = new Game.Rectangle(40, 40, 80, 80, "blue");
-    rects.unshift(goal_rect);
-    
     var colors = ["white","white","darkgreen"];   
     ctx.save();     
     ctx.fillStyle = "black";
     for (var x = 0, i = 0; i < rows; x+=40, i++) {  
+      var row = []
       for (var y = 0, j=0; j < columns; y+=40, j++) {
         var color = colors[~~(Math.random() * colors.length)];
         ctx.beginPath();
         // X AND Y ARE FLIPPED; X = VERTICAL, Y = HORIZONTAL !!!
-        var rect = new Game.Rectangle(y, x, 40, 40, color); 
+        var rect = new Game.Rectangle(y, x, 40, 40, color);
+        
+        row.push(rect);
         // makes sure wall does not spawn on player's start location
         if (collisionCheck(rect,playerList)) {
           color = rect.color = "white";
         }
         // make sure wall does not spawn on goal tile
-        if (rect.within(goal_rect)){
+        if (rect.overlaps(goal_rect)){
           color = rect.color = "white";
         }
         for (var k = 0; k < eArray.length; k++){
@@ -536,12 +608,13 @@ function enemyCollision(enemyList,playerList) {
         } else {
           whiteRects.unshift(rect);
         }
-      }  
+      }
+      grid.push(row);
     }
     
     // draw goal
     ctx.fillStyle = "blue";
-    ctx.fillRect(40, 40, 80, 80);      
+    ctx.fillRect(goal_rect.left,goal_rect.top, goal_rect.width, goal_rect.height);      
     ctx.restore();  
     
     // store the generate map as this image texture
@@ -552,18 +625,6 @@ function enemyCollision(enemyList,playerList) {
     ctx = null;
   }
   
-  // regenerate maze
-  Map.prototype.regen = function(player,enemy) {
-    // all black and white rectangles:
-    combinedRects = rects.concat(whiteRects);
-    var goal_rect = new Game.Rectangle(40, 40, 40, 40, "blue");
-  
-    rects = [];
-    whiteRects = [];
-    combinedRects = [];
-    this.generate(player,enemy) // rebuild the map;
-  }
-  
   // draw the map adjusted to camera
   Map.prototype.draw = function(context, xView, yView){         
     // easiest way: draw the entire map changing only the destination coordinate in canvas
@@ -572,7 +633,7 @@ function enemyCollision(enemyList,playerList) {
     
     // didactic way:
     var sx, sy, dx, dy;
-       var sWidth, sHeight, dWidth, dHeight;
+    var sWidth, sHeight, dWidth, dHeight;
     
     // offset point to crop the image
     sx = xView;
@@ -597,7 +658,7 @@ function enemyCollision(enemyList,playerList) {
     dWidth = sWidth;
     dHeight = sHeight;                  
     
-    context.drawImage(this.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);      
+    context.drawImage(this.image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
   }
   
   // add "class" Map to Game object
@@ -614,8 +675,8 @@ function enemyCollision(enemyList,playerList) {
 
   // game settings: 
   var FPS = 120;
-  var INTERVAL = 1000/FPS; // milliseconds
-  var STEP = INTERVAL/1000 // seconds
+  var INTERVAL = 1000/FPS; 
+  var STEP = INTERVAL/1000;
   
   // setup an object that represents the room
   var room = {
@@ -624,20 +685,28 @@ function enemyCollision(enemyList,playerList) {
     map: new Game.Map(3000, 3000)
   };
   
+  // for debugging:
+  /*var room = {
+    width: 500,
+    height: 500,
+    map: new Game.Map(500, 500)
+  };*/
+  
   // setup player in the middle of the maze
   var player = new Game.Player(room.width/2, room.height/2);
+  goal_rect = new Game.Rectangle(0, 40, 80, 80, "blue");
  
   // setup enemies
   var enemyNum = 100;
   var enemyArray = [];
+  var playerList = [player.x-player.width/2,
+                    player.y-player.height/2,
+                    player.width,
+                    player.height];
   for (var i = 0; i < enemyNum; i++){
     var randomCard = cards[~~(Math.random() * cards.length)];
     var x = ~~((Math.random() * 2950) + 1);
     var y = ~~((Math.random() * 2950) + 1);
-    var playerList = [player.x-player.width/2,
-                      player.y-player.height/2,
-                      player.width,
-                      player.height];
     var enemyList = [x-25/2, y-25/2, 25, 31];
     // don't allow enemies to spawn on top of the player
     if(!enemyCollision(playerList, enemyList)) {
@@ -654,10 +723,12 @@ function enemyCollision(enemyList,playerList) {
   
   // Game update function
   var update = function(){
+    
     if (seconds == 0){ 
+      whiteRects = []
+      rects = []
+      room.map.generate(player, enemyArray);
       seconds = 30;
-      lose = false;
-      win = false;
     }
     player.update(STEP, room.width, room.height, enemyArray);
     for (var i = 0; i < enemyArray.length; i++){
@@ -684,7 +755,7 @@ function enemyCollision(enemyList,playerList) {
     // Draw the remaining seconds left
     context.font = "50px Times New Roman";
     context.fillStyle = "red";
-    context.fillText(seconds, 450, 45);
+    context.fillText(seconds, 440, 45);
     if (win == true){
       //context.clearRect(0, 0, canvas.width, canvas.height);
       context.font = "100px Times New Roman";
@@ -705,16 +776,15 @@ function enemyCollision(enemyList,playerList) {
     if(!lose && !win){
       update();
       draw();
-    }  
+    } 
   } 
   
   // configure play/pause capabilities:
   var runningId = -1;
   Game.play = function(){ 
     if(runningId == -1){
-      runningId = setInterval(function(){
-        gameLoop();
-      }, INTERVAL);
+      runningId = setInterval( function(){ gameLoop(); }, INTERVAL);
+      setInterval(function() {seconds--;}, 1000)
       console.log("play");
     }
   }
@@ -730,17 +800,6 @@ function enemyCollision(enemyList,playerList) {
       console.log("paused");
     }
   }
-  
-  // pass player to regeneration
-  Game.sendPlayer = function(p, e) {
-    // if we have no player to send then send the 
-    // player from the game script otherwise send p.
-    (p == null) ? p = player : p; 
-    (e == null) ? e = enemyArray : e;
-    //get the player into map regen function
-    // rebuild the map;
-    room.map.regen(p,e); 
-  } 
 })();
 
 //-------------------------------------------------------------------- 
@@ -757,16 +816,16 @@ Game.controls = {
 window.addEventListener("keydown", function(e){
   switch(e.keyCode)
   {
-    case 65: // left arrow
+    case 65: // a
       Game.controls.left = true;
       break;
-    case 87: // up arrow
+    case 87: // w
       Game.controls.up = true;
       break;
-    case 68: // right arrow
+    case 68: // d
       Game.controls.right = true;
       break;
-    case 83: // down arrow
+    case 83: // s
       Game.controls.down = true;
       break;
   }
@@ -775,16 +834,16 @@ window.addEventListener("keydown", function(e){
 window.addEventListener("keyup", function(e){
   switch(e.keyCode)
   {
-    case 65: // left arrow
+    case 65: // a
       Game.controls.left = false;
       break;
-    case 87: // up arrow
+    case 87: // w
       Game.controls.up = false;
       break;
-    case 68: // right arrow
+    case 68: // d
       Game.controls.right = false;
       break;
-    case 83: // down arrow
+    case 83: // s
       Game.controls.down = false;
       break;
     case 80: // key P pauses the game
@@ -798,6 +857,4 @@ window.addEventListener("keyup", function(e){
 //--------------------------------------------------------------------
 window.onload = function(){ 
   Game.play();
-    setInterval(Game.sendPlayer, 30000);
-    setInterval(function() {seconds--;}, 1000);
 }
