@@ -22,6 +22,8 @@
 window.Game = {};
 
 // Global variables:
+var w = 1000;
+var h = 1000;
 var rects = [];
 var whiteRects = [];
 var grid = [];
@@ -29,6 +31,7 @@ var seconds = 30;
 var win = false;
 var lose = false;
 var goal_rect;
+var enemyArray = [];
 
 // Image Resources:
 var cards = [];
@@ -102,9 +105,9 @@ function enemyCollision(enemyList,playerList) {
   return (minX < maxX2 && maxX > minX2 && minY < maxY2 && maxY > minY2);
 }
 
-//------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 // Priority Queue "class"
-//------------------------------------------------------------------------------ 
+//-------------------------------------------------------------------- 
 function PriorityQueue() {
 
   var items = [];
@@ -147,9 +150,13 @@ function PriorityQueue() {
   };
 
   this.size = function () {
-      return items.length;
+    return items.length;
   };
-
+  
+  this.list = function () {
+    return items;
+  }
+  
   this.print = function () {
     for (var i = 0; i < items.length; i++) {
       console.log(items[i].element + ' - ' + items[i].priority);
@@ -169,6 +176,8 @@ function PriorityQueue() {
     this.right = this.left + this.width;
     this.bottom = this.top + this.height;
     this.color = color;
+    this.key = [];
+    this.parent = this;
   }
   
   Rectangle.prototype.set = function(left, top, /*optional*/width, /*optional*/height){
@@ -194,10 +203,392 @@ function PriorityQueue() {
         r.top < this.bottom);
   }
   
+  Rectangle.prototype.set_key = function(i,j){
+    this.key = [i,j];
+  }
+  
+  Rectangle.prototype.is_wall = function(){
+    if(this.color=="darkgreen"){
+      return true;
+    }
+    return false;
+  }
+  
+  Rectangle.prototype.key_equals = function(rect){
+    var key1 = this.key;
+    var i1 = key1[0];
+    var j1 = key1[1];
+    var key2 = rect.key;
+    var i2 = key2[0];
+    var j2 = key2[1];
+    if(i1==i2 && j1==j2){
+      return true;
+    }
+    return false;
+  }
+  
+  Rectangle.prototype.neighbors = function(){
+    var neighbors = [];
+    var i = this.key[0];
+    var j = this.key[1];
+    if(i<((w/40)-1)) {
+      var right = grid[i+1][j];
+      if(!right.is_wall() && !right.key_equals(this.parent)){
+        neighbors.push(right);
+      }
+    }
+    if(j<((h/40)-1)){
+      var down = grid[i][j+1];
+      if(!down.is_wall() && !down.key_equals(this.parent)){
+        neighbors.push(down);
+      }
+    }
+    if(i>0){
+      var left = grid[i-1][j];
+      if(!left.is_wall() && !left.key_equals(this.parent)){
+        neighbors.push(left);
+      }
+    }
+    if(j>0){
+      var up = grid[i][j-1];
+      if(!up.is_wall() && !up.key_equals(this.parent)){
+        neighbors.push(up);
+      }
+    }
+    return neighbors;
+  }
+  
   // add "class" Rectangle to Game object
   Game.Rectangle = Rectangle;
 })();
 
+//-------------------------------------------------------------------- 
+// Player wrapper
+//--------------------------------------------------------------------
+(function(){
+  function Player(x, y){
+    // (x, y) = center of object
+    // ATTENTION:
+    // it represents the player position on the world(room), 
+    // not the canvas position
+    // X AND Y coordinates are in the middle of square, 
+    // not top left !!!!
+    this.x = x;
+    this.y = y;       
+    
+    // move speed in pixels per second
+    this.speed = 100;   
+    
+    // render properties
+    this.width = 25;
+    this.height = 25;
+    
+    this.current_rect;
+  }
+  
+  Player.prototype.update = function(step, worldWidth, worldHeight,eArray){
+    
+    // keep track of which rect in grid the player is occupying
+    var j = Math.floor(this.x/40);
+    var i = Math.floor(this.y/40);
+    this.current_rect = grid[i][j];
+    //console.log(~~(this.x/40)+" "+~~(this.y/40));
+    
+    // wall collision checks
+    var flags = [false,false,false,false];
+    for(var i = 0; i < rects.length; i++){
+      var current = rects[i];
+      var playerList = [this.x-this.width/2,this.y-this.height/2,this.width,this.height];
+      
+      // win condition: get to the blue tile
+      if(collisionCheck(goal_rect, playerList)){
+        if (goal_rect.color == "blue"){
+          win = true;
+          console.log("you win!!!");
+        }
+      }
+      
+      // sensor-wall collisions
+      var size = 1.0;
+      var right = [this.x+this.width/2,this.y-this.height/2,size,this.height];
+      var bottom = [this.x-this.width/2,this.y+this.height/2,this.width,size];
+      var left = [this.x-this.width/2-size,this.y-this.height/2,size,this.height];
+      var top = [this.x-this.width/2,this.y-this.height/2-size,this.width,size];
+      if(collisionCheck(current,right)){
+        flags[0] = true;
+      }
+      if(collisionCheck(current,bottom)){
+        flags[1] = true;
+      }
+      if(collisionCheck(current,left)){
+        flags[2] = true;
+      }
+      if(collisionCheck(current,top)){
+        flags[3] = true;
+      }
+    }
+    
+    // check for enemy collisions, lose condition
+    for (var i = 0; i < eArray.length; i++){
+      var en = eArray[i];
+      var enemyList = [en.x-en.width/2,en.y-en.height/2,en.width,en.height];
+      if (enemyCollision(playerList, enemyList)){
+        lose = true;
+      }
+    }  
+    
+    // parameter step is the time between frames ( in seconds )
+    // check controls and move the player accordingly
+    if(Game.controls.left && !flags[2]) {
+      this.x -= this.speed * step;
+    }  
+    if(Game.controls.up && !flags[3]) {
+      this.y -= this.speed * step;
+    }  
+    if(Game.controls.right && !flags[0]) { 
+      this.x += this.speed * step;
+    }  
+    if(Game.controls.down && !flags[1]) {      
+      this.y += this.speed * step;
+    }
+    
+    // don't let player leaves the world's boundary
+    if(this.x - this.width/2 < 0){
+      this.x = this.width/2;
+    }
+    if(this.y - this.height/2 < 0){
+      this.y = this.height/2;
+    }
+    if(this.x + this.width/2 > worldWidth){
+      this.x = worldWidth - this.width/2;
+    }
+    if(this.y + this.height/2 > worldHeight){
+      this.y = worldHeight - this.height/2;
+    } 
+  }  
+
+  Player.prototype.draw = function(context, xView, yView){    
+    // draw a simple rectangle shape as our player model
+    context.save();
+    context.fillStyle = "black";
+    // before draw we need to convert player world's position to canvas position      
+    context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
+    context.restore();      
+  }
+  
+  // add "class" Player to Game object
+  Game.Player = Player;
+})();
+  
+//--------------------------------------------------------------------
+// Enemy wrapper
+//-------------------------------------------------------------------- 
+(function(){
+  function Enemy(x,y,card){
+    this.x = x;
+    this.y = y;       
+    this.speed = 50;   
+    this.width = 25;
+    this.height = 31;
+    this.counter = 40;
+    this.threshold = 600;
+    this.card = card;
+    this.current_rect;
+    this.path = [];
+  }
+  
+  Enemy.prototype.update = function(step, player, worldWidth, worldHeight){
+    
+    // keep track of which rect in grid the enemy is occupying
+    var j = Math.floor(this.x/40);
+    var i = Math.floor(this.y/40);
+    this.current_rect = grid[i][j];
+    
+    // A* behavior if player is within theshold
+    var start = this.current_rect;
+    var goal = player.current_rect;
+    if(euclidean_distance(start,goal)) {
+      // only make a new path when the player moves to a new
+      // grid location
+      this.path = a_star(start, goal);
+      if(this.path.length>0){
+        var head_node = this.path[0];
+        var x = head_node[0];
+        var y = head_node[1];
+        if(this.x > x) {
+          this.x -= this.speed * step;
+        }  
+        if(this.y > y) {
+          this.y -= this.speed * step;
+        }  
+        if(this.x < x) { 
+          this.x += this.speed * step;
+        }  
+        if(this.y < y) {      
+          this.y += this.speed * step;
+        }
+      }  
+    } 
+    // reflex behavior if player is too far away
+    else {
+      
+    }
+    
+    // don't let enemy leaves the world's boundary
+    if(this.x - this.width/2 < 0){
+      this.x = this.width/2;
+    }
+    if(this.y - this.height/2 < 0){
+      this.y = this.height/2;
+    }
+    if(this.x + this.width/2 > worldWidth){
+      this.x = worldWidth - this.width/2;
+    }
+    if(this.y + this.height/2 > worldHeight){
+      this.y = worldHeight - this.height/2;
+    } 
+  }
+  
+  // based on  player draw
+  Enemy.prototype.draw = function(context, xView, yView){   
+    context.save();
+    console.log(this.path.length);
+    // debugging path
+    /*for(var k=0; k<this.path.length; k++){
+      context.drawImage(this.card, this.path[k][0]-this.width/2 - xView, this.path[k][1]-this.height/2 - yView);  
+    }*/
+    //context.fillStyle = "red";    
+    //context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
+    context.drawImage(this.card, this.x-this.width/2 - xView, this.y-this.height/2 - yView);
+    context.restore();      
+  }
+  
+  function contains(set, node){
+    if(set.length==0){
+      return false;
+    }
+    for(var k=0; k<set.length; k++){
+      if(node.key_equals(set[k])){
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  function manhattan(n1,n2){
+    var dx = Math.abs(n1.left-n2.left);
+    var dy = Math.abs(n1.top-n2.top);
+    return dx + dy;
+  }
+  
+  function euclidean_distance(n1,n2){
+    var dx = Math.abs(n1.left-n2.left);
+    var dy = Math.abs(n1.top-n2.top);
+    return Math.sqrt(((dx*dx)+(dy*dy)));
+  }
+  
+  function bfs(start, goal){
+    var set = [];
+    var queue = [];
+    queue.unshift([start,[]]);
+    while(queue.length>0){
+      var current = queue.pop();
+      var node = current[0];
+      var path = current[1];
+      if(node.key_equals(goal)){
+        return path;
+      }
+      var successors = node.neighbors();
+      if(successors.length>0){
+        for(var k=0; k<successors.length;k++){
+          var successor = successors[k];
+          if(!contains(set,successor)){
+            successor.parent = node;
+            var x = successor.left + successor.width/2;
+            var y = successor.top + successor.height/2;
+            var new_path = path.slice(0);
+            new_path.push([x,y]);
+            var state = [successor, new_path] ;
+            set.push(successor);
+            queue.unshift(state);
+          }
+        }
+      }
+    }
+    return [];
+  }
+  
+  function dfs(start, goal){
+    var set = [];
+    var stack = [];
+    stack.push([start,[]]);
+    while(stack.length>0){
+      var current = stack.pop();
+      var node = current[0];
+      var path = current[1];
+      if(node.key_equals(goal)){
+        return path;
+      }
+      var successors = node.neighbors();
+      if(successors.length>0){
+        for(var k=0; k<successors.length;k++){
+          var successor = successors[k];
+          if(!contains(set,successor)){
+            successor.parent = node;
+            var x = successor.left + successor.width/2;
+            var y = successor.top + successor.height/2;
+            var new_path = path.slice(0);
+            new_path.push([x,y]);
+            var state = [successor, new_path] ;
+            set.push(successor);
+            stack.unshift(state);
+          }
+        }
+      }
+    }
+    return [];
+  }
+  
+  function a_star(start, goal){
+    var closed_set = []
+    var open_set = new PriorityQueue();
+    open_set.enqueue([start,[]], 0);
+    while(!open_set.isEmpty()){
+      var current = open_set.dequeue();
+      var node = current.element[0];
+      var path = current.element[1];
+      if(node.key_equals(goal)){
+        return path;
+      }
+      closed_set.push(node);
+      var successors = node.neighbors();
+      if(successors.length > 0){
+        for(var i=0; i<successors.length; i++){
+          var successor = successors[i];
+          if(contains(closed_set,successor)) {
+            continue;
+          }
+          successor.parent = node;
+          // pushing tuple of x,y middle coords
+          var x = successor.left + successor.width/2;
+          var y = successor.top + successor.height/2;
+          var new_path = path.slice(0);
+          new_path.push([x,y]);
+          var state = [successor, new_path];
+          var gcost = path.length + 1;
+          var hcost = manhattan(successor,goal);
+          var fcost = gcost + hcost;
+          open_set.enqueue(state, fcost);
+        }
+      }
+    }
+    return [];
+  }
+  
+  // add "class" Enemy to Game object
+  Game.Enemy = Enemy;
+  
+})();  
 
 //-------------------------------------------------------------------- 
 // Camera wrapper
@@ -296,256 +687,9 @@ function PriorityQueue() {
   Game.Camera = Camera;
 })();
 
-//-------------------------------------------------------------------- 
-// Player wrapper
-//--------------------------------------------------------------------
-(function(){
-  function Player(x, y){
-    // (x, y) = center of object
-    // ATTENTION:
-    // it represents the player position on the world(room), 
-    // not the canvas position
-    // X AND Y coordinates are in the middle of square, 
-    // not top left !!!!
-    this.x = x;
-    this.y = y;       
-    
-    // move speed in pixels per second
-    this.speed = 100;   
-    
-    // render properties
-    this.width = 25;
-    this.height = 25;
-  }
-  
-  Player.prototype.update = function(step, worldWidth, worldHeight,eArray){
-    
-    // wall collision checks
-    var flags = [false,false,false,false];
-    for(var i = 0; i < rects.length; i++){
-      var current = rects[i];
-      var playerList = [this.x-this.width/2,this.y-this.height/2,this.width,this.height];
-      
-      // win condition: get to the blue tile
-      if(collisionCheck(goal_rect, playerList)){
-        if (goal_rect.color == "blue"){
-          win = true;
-          console.log("you win!!!");
-        }
-      }
-      
-      // sensor-wall collisions
-      var size = 1.0;
-      var right = [this.x+this.width/2,this.y-this.height/2,size,this.height];
-      var bottom = [this.x-this.width/2,this.y+this.height/2,this.width,size];
-      var left = [this.x-this.width/2-size,this.y-this.height/2,size,this.height];
-      var top = [this.x-this.width/2,this.y-this.height/2-size,this.width,size];
-      if(collisionCheck(current,right)){
-        flags[0] = true;
-      }
-      if(collisionCheck(current,bottom)){
-        flags[1] = true;
-      }
-      if(collisionCheck(current,left)){
-        flags[2] = true;
-      }
-      if(collisionCheck(current,top)){
-        flags[3] = true;
-      }
-    }
-    
-    // check for enemy collisions, lose condition
-    for (var i = 0; i < eArray.length; i++){
-      var en = eArray[i];
-      var enemyList = [en.x-en.width/2,en.y-en.height/2,en.width,en.height];
-      if (enemyCollision(playerList, enemyList)){
-        lose = true;
-      }
-    }  
-    
-    // parameter step is the time between frames ( in seconds )
-    // check controls and move the player accordingly
-    if(Game.controls.left && !flags[2]) {
-      this.x -= this.speed * step;
-    }  
-    if(Game.controls.up && !flags[3]) {
-      this.y -= this.speed * step;
-    }  
-    if(Game.controls.right && !flags[0]) { 
-      this.x += this.speed * step;
-    }  
-    if(Game.controls.down && !flags[1]) {      
-      this.y += this.speed * step;
-    }
-    
-    // don't let player leaves the world's boundary
-    if(this.x - this.width/2 < 0){
-      this.x = this.width/2;
-    }
-    if(this.y - this.height/2 < 0){
-      this.y = this.height/2;
-    }
-    if(this.x + this.width/2 > worldWidth){
-      this.x = worldWidth - this.width/2;
-    }
-    if(this.y + this.height/2 > worldHeight){
-      this.y = worldHeight - this.height/2;
-    } 
-  }  
-
-  Player.prototype.draw = function(context, xView, yView){    
-    // draw a simple rectangle shape as our player model
-    context.save();
-    context.fillStyle = "black";
-    // before draw we need to convert player world's position to canvas position      
-    context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
-    context.restore();      
-  }
-  
-  // add "class" Player to Game object
-  Game.Player = Player;
-})();
-  
-//--------------------------------------------------------------------
-// Enemy wrapper
-//-------------------------------------------------------------------- 
-(function(){
-  function Enemy(x,y,card){
-    this.x = x;
-    this.y = y;       
-    this.speed = 100;   
-    this.width = 25;
-    this.height = 31;
-    this.counter = 40;
-    this.threshold = 40;
-    this.card = card;
-  }
-  
-  Enemy.prototype.successor = function(action){
-    var x = action[0];
-    var y = action[1];
-    var nextState = [[this.x+x],[this.y+y]];
-    return nextState;
-  }
-  
-  Enemy.prototype.update = function(player, worldWidth, worldHeight){
-    var collide = false;
-    var actions = [[1,0],[0,1],[-1,0],[0,-1]];
-    var bestAction = actions[0];
-    var min = Number.POSITIVE_INFINITY;
-    for (var i = 0; i < actions.length; i++){
-      var action = actions[i];
-      var nextState = this.successor(action);
-      var x = nextState[0];
-      var y = nextState[1];
-      // euclidean distance:
-      var dx = player.x - x;
-      var dy = player.y - y;
-      var distance = Math.sqrt(((dx*dx) + (dy*dy)));
-      var val = distance;
-      if (min > val){
-        min = val
-        bestAction = action;
-      }
-    }
-    var enemyList = [this.x-this.width/2,this.y-this.height/2,this.width,this.height];
-    for(var j = 0; j < rects.length; j++){
-      var current = rects[j];
-      if(collisionCheck(current,enemyList)){
-        if(this.x - this.width/2 < current.left){
-          this.x -= 1;
-        }
-        if(this.y - this.height/2 < current.top){
-          this.y -= 1;
-        }
-        if(this.x + this.width/2 > current.left+current.width){
-          this.x += 1;
-        }
-        if(this.y + this.height/2 > current.top+current.height){
-          this.y += 1;
-        }
-        collide= true;
-      }
-    }
-    var divisor = 5;
-    if (!collide && this.counter == this.threshold){
-      this.x += bestAction[0]/divisor;
-      this.y += bestAction[1]/divisor; 
-    } else {
-      // patrol behavior:
-      if ( 30 < this.counter ){
-        this.x -= bestAction[0]/divisor;
-        this.y -= bestAction[1]/divisor;
-      }
-      if ( 0 < this.counter && this.counter < 20 ){
-        if(bestAction[0] == 0){
-          this.x += 1;
-        } else {
-          this.x += 0;
-        }
-        if(bestAction[1] == 0){
-          this.y += 1;
-        } else {
-          this.y += 0;
-        }
-        // pick random move
-        //this.x -= actions[~~(Math.random() * actions.length)][0];
-        //this.y -= actions[~~(Math.random() * actions.length)][1];
-      }
-      this.counter -= 1;
-      if (this.counter == 0){
-        this.counter = this.threshold;
-      }  
-    }
-    // don't let enemy leaves the world's boundary
-    if(this.x - this.width/2 < 0){
-      this.x = this.width/2;
-    }
-    if(this.y - this.height/2 < 0){
-      this.y = this.height/2;
-    }
-    if(this.x + this.width/2 > worldWidth){
-      this.x = worldWidth - this.width/2;
-    }
-    if(this.y + this.height/2 > worldHeight){
-      this.y = worldHeight - this.height/2;
-    } 
-  }
-  
-  // based on  player draw
-  Enemy.prototype.draw = function(context, xView, yView){   
-    context.save();
-    
-    //context.fillStyle = "red";    
-    //context.fillRect((this.x-this.width/2) - xView, (this.y-this.height/2) - yView, this.width, this.height);
-    context.drawImage(this.card, this.x-this.width/2 - xView, this.y-this.height/2 - yView);
-    context.restore();      
-  }
-  
-  Enemy.prototype.find_Astar_path_to_player = function(node){
-    /*var closed_set = []
-    var pq = new PriorityQueue();
-    pq.enqueue([node,[]);
-    while(!pq.isEmpty()){
-      var current = pq.dequeue();
-      var node = current.element[0];
-      var path = current.element[1];
-      var successors = node.get_neighbors();
-      closed_set.push(node)
-      for(var i=0; i<successors.length; i++){
-        var successor = successors[i];
-      }
-    }*/
-  }
-  
-  // add "class" Enemy to Game object
-  Game.Enemy = Enemy;
-  
-})();  
-
-//------------------------------------------------------------------------------   
+//--------------------------------------------------------------------  
 // Map wrapper
-//------------------------------------------------------------------------------
+//--------------------------------------------------------------------
 (function(){
   function Map(width, height){
     // map dimensions
@@ -558,6 +702,9 @@ function PriorityQueue() {
   
   // generate an example of a large map
   Map.prototype.generate = function(player, eArray){
+    grid = [];
+    rects = []
+    whiteRects = []
     var ctx = document.createElement("canvas").getContext("2d");    
     ctx.canvas.width = this.width;
     ctx.canvas.height = this.height;    
@@ -574,13 +721,18 @@ function PriorityQueue() {
     ctx.save();     
     ctx.fillStyle = "black";
     for (var x = 0, i = 0; i < rows; x+=40, i++) {  
-      var row = []
+      var row = [];
       for (var y = 0, j=0; j < columns; y+=40, j++) {
         var color = colors[~~(Math.random() * colors.length)];
         ctx.beginPath();
+        /*if(i==5 && j==5 || i==2 && j==5){
+          color = "darkgreen";
+        } else {
+          color = "white";
+        }*/
         // X AND Y ARE FLIPPED; X = VERTICAL, Y = HORIZONTAL !!!
         var rect = new Game.Rectangle(y, x, 40, 40, color);
-        
+        rect.set_key(i,j);
         row.push(rect);
         // makes sure wall does not spawn on player's start location
         if (collisionCheck(rect,playerList)) {
@@ -680,9 +832,9 @@ function PriorityQueue() {
   
   // setup an object that represents the room
   var room = {
-    width: 3000,
-    height: 3000,
-    map: new Game.Map(3000, 3000)
+    width: w,
+    height: h,
+    map: new Game.Map(w, h)
   };
   
   // for debugging:
@@ -697,16 +849,19 @@ function PriorityQueue() {
   goal_rect = new Game.Rectangle(0, 40, 80, 80, "blue");
  
   // setup enemies
-  var enemyNum = 100;
-  var enemyArray = [];
+  var enemyNum = 2;
+  
+  var offset = 50;
   var playerList = [player.x-player.width/2,
                     player.y-player.height/2,
                     player.width,
                     player.height];
   for (var i = 0; i < enemyNum; i++){
     var randomCard = cards[~~(Math.random() * cards.length)];
-    var x = ~~((Math.random() * 2950) + 1);
-    var y = ~~((Math.random() * 2950) + 1);
+    var x = Math.abs(Math.floor((Math.random() * w-offset) + 1));
+    //console.log("x"+x);
+    var y = Math.abs(Math.floor((Math.random() * h-offset) + 1));
+    //console.log("y"+y);
     var enemyList = [x-25/2, y-25/2, 25, 31];
     // don't allow enemies to spawn on top of the player
     if(!enemyCollision(playerList, enemyList)) {
@@ -724,16 +879,14 @@ function PriorityQueue() {
   // Game update function
   var update = function(){
     
-    if (seconds == 0){ 
-      whiteRects = []
-      rects = []
+    if (seconds == 0){
       room.map.generate(player, enemyArray);
       seconds = 30;
     }
     player.update(STEP, room.width, room.height, enemyArray);
     for (var i = 0; i < enemyArray.length; i++){
       var en = enemyArray[i];
-      en.update(player, room.width, room.height);
+      en.update(STEP, player, room.width, room.height);
     }      
     camera.update();
   }
