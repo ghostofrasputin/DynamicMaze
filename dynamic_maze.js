@@ -26,7 +26,7 @@ var h = 1000;
 var rects = [];
 var whiteRects = [];
 var grid = [];
-var seconds = 30;
+var seconds = 5;
 var win = false;
 var lose = false;
 var goal_rect;
@@ -164,7 +164,7 @@ function enemyCollision(enemyList,playerList) {
     
     if (seconds == 0){
       room.map.generate(player, enemyArray);
-      seconds = 30;
+      seconds = 5;
     }
     player.update(STEP, room.width, room.height, enemyArray);
     for (var i = 0; i < enemyArray.length; i++){
